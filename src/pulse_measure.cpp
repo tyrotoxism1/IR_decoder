@@ -1,12 +1,14 @@
 #include "pulse_measure.hpp"
 #include "stm32f4xx.h"
+#include "uart.h"
+#include "printf.h"
 
 Pulse_measure::Pulse_measure(){
     //
     int init_result = input_capture_timer_init();
     //If timer init was successful, class is valid
     if(init_result>0){
-        initialized = 1; 
+        printf("success");
 
     }
 

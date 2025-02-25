@@ -1,0 +1,3 @@
+[submodule "lib/UART_driver"]
+	path = lib/UART_driver
+	url = https://github.com/tyrotoxism1/UART_driver.git
