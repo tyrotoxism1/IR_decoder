@@ -1,14 +1,15 @@
-#include "pulse_measure.hpp"
+#include "pulse_measure.h"
 #include "stm32f4xx.h"
 #include "uart.h"
 #include "printf.h"
 
+/*
 Pulse_measure::Pulse_measure(){
     //
     int init_result = input_capture_timer_init();
     //If timer init was successful, class is valid
     if(init_result>0){
-        printf("success");
+        printf_("success");
 
     }
 
@@ -27,3 +28,4 @@ int Pulse_measure::input_capture_timer_init(){
     TIM2->CCER |= (TIM_CCER_CC1P | TIM_CCER_CC1NP | TIM_CCER_CC1E); 
 }
 
+*/
