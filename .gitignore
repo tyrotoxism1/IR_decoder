@@ -33,5 +33,4 @@
 
 # VSCode 
 .vscode/
-.pio/build/
-.pio/libdeps/genericSTM32F446RE/integrity.dat
+.pio/
