@@ -1,6 +1,7 @@
 #ifndef PULSE_MEASURE_H
 #define PULSE_MEASURE_H
 
+/*
 // ====================================================
 // Pulse_measure class uses input capture mode of timers to measure 
 //  timings between rise and fall IR signal. The timings are stored
@@ -16,4 +17,5 @@ class Pulse_measure {
         Pulse_measure();    
 };
 
+*/
 #endif
