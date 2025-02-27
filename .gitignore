@@ -33,4 +33,4 @@
 
 # VSCode 
 .vscode/
-.pio/build/
+.pio/
