@@ -5,9 +5,11 @@
 #error "printf.h not found!"
 #endif
 
-int main(void){
+int main(void)
+{
     UART_config();
-    pulse_measure_init();
+    // 15 is timeout time in milliseconds for transmission 
+    pulse_measure_init(15);
     while(1){
     }
     return 0;
