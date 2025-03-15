@@ -44,7 +44,6 @@ void TIM2_IRQHandler(void)
     if(TIM2->SR & TIM_SR_UIF){
         GPIOA->ODR &= ~(GPIO_ODR_OD4); 
         pm_instance->active_transmission = 0;
-        pm_instance->edge_index = 0;
         //clear status register to acknowledge interrupt has fired
         TIM2->SR &= ~(TIM_SR_UIF);
     }
@@ -149,6 +148,11 @@ void pulse_measure_reset(void)
     TIM2->CR1 |= (TIM_CR1_CEN);
 }
 
+/**
+ * pulse_measure_print_values() - Displays module's metadata and buffer values
+ * 
+ * @print_array: Prints all array values if nonzero, ignores printing otherwise 
+ */
 void pulse_measure_print_values(int print_array)
 {
     printf("Active transmisssion: %i\n", pm_instance->active_transmission);
@@ -164,19 +168,25 @@ void pulse_measure_print_values(int print_array)
     }
 }
 
+/**
+ * pulse_measure_active_check() - Enable overflow interrupt if transmission is active, otherwise disable 
+ */
 void pulse_measure_active_check(void)
 {
     if(pm_instance->active_transmission){
-        // enable overflow interrupt for timing out/error
         TIM2->SR &= ~TIM_SR_UIF;  
         TIM2->DIER |= TIM_DIER_UIE; 
     }
     else{
-        // disable overflow interrupt for timing out/error
         TIM2->DIER &= ~(TIM_DIER_UIE); 
     }
 }
 
+/**
+ * pulse_measure_get_buf_val() - Accessor of specific timing buffer index
+ * 
+ * @index: 0 based index of buffer
+ */
 uint32_t pulse_measure_get_buf_val(uint16_t index)
 {
     return pm_instance->timing_buf[index];
