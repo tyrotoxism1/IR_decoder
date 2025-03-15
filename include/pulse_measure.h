@@ -13,6 +13,7 @@
 */
 #ifndef PULSE_MEASURE_H
 #define PULSE_MEASURE_H
+#include <inttypes.h>
 
 //opaque pointer
 typedef struct pulse_measure_t pulse_measure_t;
@@ -22,5 +23,8 @@ void pulse_measure_init(uint32_t timeout_ms);
 uint32_t pulse_measure_get_edge_count(void);
 uint32_t pulse_measure_get_tranmission_active(void);
 void pulse_measure_reset(void);
+void pulse_measure_active_check(void);
+void pulse_measure_print_values(int print_array);
+uint32_t pulse_measure_get_buf_val(uint16_t index);
 
 #endif // PULSE_MEASURE_H

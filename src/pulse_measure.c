@@ -4,14 +4,14 @@
 #include "printf.h"
 
 
-static const uint32_t PULSE_MEASURE_MAX_PULSES = 150;
+#define PULSE_MEASURE_MAX_PULSES 150
 
 /**
  * struct pulse_measure_t - holds incoming pulse measurnments and minimum necessary
  * supplimental info for transmission pulse measurnments 
  * @active_transmission: Indicates if transmission of currently occuring. Set by 
  * input capture interrupt and cleared when timeout interrupt occurs.
- * @timing_buf: Buffer of pulse measurnments. Timer resolution is .1ms so counter
+ * @timing_buf: Buffer of pulse measurnments. Timer resolution is 1ms so counter
  * values stored in buffer are a tenth of a milisecond.  
  * @edge_index: Count of number of edges from input capture interrupt. Acts as 
  * `timing_buf` index
@@ -22,7 +22,8 @@ struct pulse_measure_t{
     uint32_t edge_index;
 };
 // Create global single instance of pulse measure module and init values to 0.
-static pulse_measure_handle pm_instance = {0};
+static pulse_measure_t pm_instance_storage = {0};
+pulse_measure_handle pm_instance = &pm_instance_storage;
 
 /**
  * TIM2_IRQHandler() - Interrupt handler for TIM2 interrupts. Handles input capture
@@ -34,18 +35,18 @@ static pulse_measure_handle pm_instance = {0};
 void TIM2_IRQHandler(void)
 {
     if(TIM2->SR & TIM_SR_CC1IF){
-        GPIOA->ODR ^= GPIO_ODR_OD4; 
-        //clear status register to acknowledge interrupt has fired
-        TIM2->SR &= ~(TIM_SR_CC1IF);
-
+        GPIOA->ODR |= GPIO_ODR_OD4; 
         pm_instance->active_transmission = 1; 
-        pm_instance->timing_buf[(pm_instance->edge_index)++] = TIM2->CCR1;
         TIM2->CNT = 0;
+        // Reading CCR1 clears TIM->SR
+        pm_instance->timing_buf[(pm_instance->edge_index)++] = TIM2->CCR1;
     }
     if(TIM2->SR & TIM_SR_UIF){
+        GPIOA->ODR &= ~(GPIO_ODR_OD4); 
         pm_instance->active_transmission = 0;
         pm_instance->edge_index = 0;
-
+        //clear status register to acknowledge interrupt has fired
+        TIM2->SR &= ~(TIM_SR_UIF);
     }
 }
 
@@ -75,7 +76,7 @@ static void _pulse_measure_gpio_init(void)
  *       Passed value shall be the desried timeout in microseconds, which
  *       is converted to timer unit resolution of 0.1ms.  
  * 
- * Sets TIM2 to input capture mode. Current function written for STM32F4 MCU, 
+ * Set TIM2 to input capture mode. Current function written for STM32F4 MCU, 
  * thus with default 16MHz clock speed, pre-scalar of 1599 gives timer count 
  * resolution of .1ms.  
  * 
@@ -83,10 +84,11 @@ static void _pulse_measure_gpio_init(void)
 static void _pulse_measure_timer_init(uint32_t timeout){
     RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
     TIM2->PSC = 1599;
-    timeout = timeout/10;
+    timeout = timeout*10;
     TIM2->ARR = timeout;
     // Map IC1 (input capture1) to TI1 (timer interrupt1), sets CC1 as input for TIM2 
     TIM2->CCMR1 |= (TIM_CCMR1_CC1S_0);
+    TIM2->DIER &= ~(TIM_DIER_UIE); 
     TIM2->DIER |= TIM_DIER_CC1IE;
     // Configure events to trigger on rising and falling edges and enable Capture Compare channel 1
     TIM2->CCER |= (TIM_CCER_CC1P | TIM_CCER_CC1NP | TIM_CCER_CC1E); 
@@ -103,7 +105,6 @@ static void _pulse_measure_timer_init(uint32_t timeout){
 */
 void pulse_measure_init(uint32_t timeout_ms)
 {
-    pm_instance->active_transmission = 0;
     _pulse_measure_gpio_init();
     _pulse_measure_timer_init(timeout_ms);
 }
@@ -126,7 +127,7 @@ uint32_t pulse_measure_get_tranmission_active(void)
 }
 
 /**
- * pulse_measure_reset() - blocks interrupts while resetting pulse measrunment member values.
+ * pulse_measure_reset() - blocks interrupts while resetting pulse measurnment member values.
  * 
  * If error occurs or timer for pulse measurment timesout, this function should be called to 
  * reset/clear values. It is not called automatically. Function disables interrupts for TIM2
@@ -137,12 +138,46 @@ void pulse_measure_reset(void)
     NVIC_DisableIRQ(TIM2_IRQn);
     TIM2->CR1 &= ~(TIM_CR1_CEN);
 
-    for(uint32_t i=0; i<PULSE_MEASURE_MAX_PULSES; i++)
-        pm_instance->timing_buf[i] = 0;    
+    for(int i=0; i<PULSE_MEASURE_MAX_PULSES; i++){
+        pm_instance->timing_buf[i] = 0;
+    }
 
     pm_instance->active_transmission = 0;
     pm_instance->edge_index = 0;
 
     NVIC_EnableIRQ(TIM2_IRQn);
     TIM2->CR1 |= (TIM_CR1_CEN);
-} 
+}
+
+void pulse_measure_print_values(int print_array)
+{
+    printf("Active transmisssion: %i\n", pm_instance->active_transmission);
+    printf("edge inded: %i\n", pm_instance->active_transmission);
+    if(print_array){
+        printf("Array values:");
+        for(int i=0; i<PULSE_MEASURE_MAX_PULSES; i++){
+            if(i%15==0){
+                printf("\n");
+            }
+            printf(" %i ", pm_instance->timing_buf[i]);
+        }
+    }
+}
+
+void pulse_measure_active_check(void)
+{
+    if(pm_instance->active_transmission){
+        // enable overflow interrupt for timing out/error
+        TIM2->SR &= ~TIM_SR_UIF;  
+        TIM2->DIER |= TIM_DIER_UIE; 
+    }
+    else{
+        // disable overflow interrupt for timing out/error
+        TIM2->DIER &= ~(TIM_DIER_UIE); 
+    }
+}
+
+uint32_t pulse_measure_get_buf_val(uint16_t index)
+{
+    return pm_instance->timing_buf[index];
+}
