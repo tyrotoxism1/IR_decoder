@@ -14,6 +14,7 @@
 #ifndef PULSE_MEASURE_H
 #define PULSE_MEASURE_H
 #include <inttypes.h>
+#include <math.h>
 
 //opaque pointer
 typedef struct pulse_measure_t pulse_measure_t;

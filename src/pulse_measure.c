@@ -36,14 +36,18 @@ void TIM2_IRQHandler(void)
 {
     if(TIM2->SR & TIM_SR_CC1IF){
         GPIOA->ODR |= GPIO_ODR_OD4; 
+        TIM2->SR &= ~TIM_SR_UIF;  
+        TIM2->DIER |= TIM_DIER_UIE; 
         pm_instance->active_transmission = 1; 
-        TIM2->CNT = 0;
-        // Reading CCR1 clears TIM->SR
+        // Reading CCR1 clears TIM_SR_CC1F 
         pm_instance->timing_buf[(pm_instance->edge_index)++] = TIM2->CCR1;
+        TIM2->CNT = 0;
     }
     if(TIM2->SR & TIM_SR_UIF){
         GPIOA->ODR &= ~(GPIO_ODR_OD4); 
+        TIM2->DIER &= ~(TIM_DIER_UIE); 
         pm_instance->active_transmission = 0;
+        pm_instance->edge_index = 0;
         //clear status register to acknowledge interrupt has fired
         TIM2->SR &= ~(TIM_SR_UIF);
     }
@@ -70,21 +74,35 @@ static void _pulse_measure_gpio_init(void)
 }
 
 /**
- * _pulse_measure_timer_init() - Sets up TIM2 for input capture mode 
- * @timeout: Sets the auto-reload register (ARR) to act as timeout for TIM2.
- *       Passed value shall be the desried timeout in microseconds, which
- *       is converted to timer unit resolution of 0.1ms.  
+ * _pulse_measure_timer_init() - Set up TIM2 for input capture mode
+ * @resolution: determines timer resolution, must be value from 0-3, with 0 
+ *              representing lowest resolution and 3 being the highest resolution. 
+ *              0 = 1ms resolution, MAX timeout ~= 60000ms
+ *              1 = .1ms resolution, MAX timeout ~= 6000ms
+ *              2 = .01ms resolution, MAX timeout ~= 600ms
+ *              3 = .001ms resolution, MAX timeout ~= 60ms
+ * @timeout: Set the amount of time (in ms) for the pulse measure module to reset back to inactive tranmsission.
+ *           If no external pulse occurs within timeout period from last edge of input signal, timer assumes 
+ *           transmission is complete (or error occurred) and resets.  
+ *           Value is adjusted based on @resolution to equivalent value, then adjusted value is assigned to ARR. 
+ *
+ * Set TIM2 to input capture mode. The passed resolution determines when the counter increments meaning all values 
+ * stored in `pm_instance->timer_buf` are of that resolution. For example, if `resolution` is 1 then counter increments 
+ * every .1ms, thus if pulse is 9.2ms wide, stored value would be '92'. 
+ * TODO: Have value of 15999 be based off of actual clock frequency
  * 
- * Set TIM2 to input capture mode. Current function written for STM32F4 MCU, 
- * thus with default 16MHz clock speed, pre-scalar of 1599 gives timer count 
- * resolution of .1ms.  
- * 
+ * Return: Indicate status of timer intialization
+ * * %0     - Initalized successfully
+ * * %-1    - Parameter Error 
  */
-static void _pulse_measure_timer_init(uint32_t timeout){
+static int _pulse_measure_timer_init(uint32_t resolution, uint32_t timeout){
+    if(resolution<0 || resolution>3)
+        return -1;
+    
     RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
-    TIM2->PSC = 1599;
-    timeout = timeout*10;
-    TIM2->ARR = timeout;
+    TIM2->PSC = 15999/( (int)(pow(10,resolution)) );
+    TIM2->ARR = timeout*(int)(pow(10,resolution));
+    printf("PSC: %i\tARR: %i\n",TIM2->PSC, TIM2->ARR);
     // Map IC1 (input capture1) to TI1 (timer interrupt1), sets CC1 as input for TIM2 
     TIM2->CCMR1 |= (TIM_CCMR1_CC1S_0);
     TIM2->DIER &= ~(TIM_DIER_UIE); 
@@ -93,6 +111,8 @@ static void _pulse_measure_timer_init(uint32_t timeout){
     TIM2->CCER |= (TIM_CCER_CC1P | TIM_CCER_CC1NP | TIM_CCER_CC1E); 
     NVIC_EnableIRQ(TIM2_IRQn);
     TIM2->CR1 |= TIM_CR1_CEN;
+
+    return 0;
 }
 
 
@@ -105,7 +125,7 @@ static void _pulse_measure_timer_init(uint32_t timeout){
 void pulse_measure_init(uint32_t timeout_ms)
 {
     _pulse_measure_gpio_init();
-    _pulse_measure_timer_init(timeout_ms);
+    _pulse_measure_timer_init(2,15);
 }
 
 /**
@@ -137,7 +157,7 @@ void pulse_measure_reset(void)
     NVIC_DisableIRQ(TIM2_IRQn);
     TIM2->CR1 &= ~(TIM_CR1_CEN);
 
-    for(int i=0; i<PULSE_MEASURE_MAX_PULSES; i++){
+    for(int i=0; i<pm_instance->edge_index; i++){
         pm_instance->timing_buf[i] = 0;
     }
 
@@ -170,17 +190,15 @@ void pulse_measure_print_values(int print_array)
 
 /**
  * pulse_measure_active_check() - Enable overflow interrupt if transmission is active, otherwise disable 
- */
 void pulse_measure_active_check(void)
 {
     if(pm_instance->active_transmission){
-        TIM2->SR &= ~TIM_SR_UIF;  
-        TIM2->DIER |= TIM_DIER_UIE; 
+
     }
     else{
-        TIM2->DIER &= ~(TIM_DIER_UIE); 
     }
 }
+ */
 
 /**
  * pulse_measure_get_buf_val() - Accessor of specific timing buffer index
