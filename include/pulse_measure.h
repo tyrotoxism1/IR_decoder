@@ -20,7 +20,7 @@
 typedef struct pulse_measure_t pulse_measure_t;
 typedef pulse_measure_t* pulse_measure_handle;
 
-void pulse_measure_init(uint32_t timeout_ms);
+int pulse_measure_init(uint32_t resolution, uint32_t timeout);
 uint32_t pulse_measure_get_edge_count(void);
 uint32_t pulse_measure_get_tranmission_active(void);
 void pulse_measure_reset(void);
