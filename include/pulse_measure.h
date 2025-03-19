@@ -27,5 +27,6 @@ void pulse_measure_reset(void);
 void pulse_measure_active_check(void);
 void pulse_measure_print_values(int print_array);
 uint32_t pulse_measure_get_buf_val(uint16_t index);
+uint32_t* pulse_measure_get_buf(void);
 
 #endif // PULSE_MEASURE_H

@@ -206,18 +206,6 @@ void pulse_measure_print_values(int print_array)
 }
 
 /**
- * pulse_measure_active_check() - Enable overflow interrupt if transmission is active, otherwise disable 
-void pulse_measure_active_check(void)
-{
-    if(pm_instance->active_transmission){
-
-    }
-    else{
-    }
-}
- */
-
-/**
  * pulse_measure_get_buf_val() - Accessor of specific timing buffer index
  * 
  * @index: 0 based index of buffer
@@ -225,4 +213,12 @@ void pulse_measure_active_check(void)
 uint32_t pulse_measure_get_buf_val(uint16_t index)
 {
     return pm_instance->timing_buf[index];
+}
+
+/**
+ * pulse_measure_get_buf() - Accessor to buffer pointer
+ */
+uint32_t* pulse_measure_get_buf(void)
+{
+    return pm_instance->timing_buf;
 }
