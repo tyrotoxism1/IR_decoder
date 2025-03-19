@@ -116,16 +116,33 @@ static int _pulse_measure_timer_init(uint32_t resolution, uint32_t timeout){
 }
 
 
-/**  
- * pulse_measure_init() - initalized pulse measure module to use TIM2 in input mode and
- * PA0.
- * @timeout_ms: provides the module with an amount of time in milliseconds where module 
- *              should timeout and reset transmission information. Value determines the ARR of TIM2.
-*/
-void pulse_measure_init(uint32_t timeout_ms)
+/**
+ * pulse_measure_init() - Setup and configure GPIO and timer 
+ * @resolution: determines timer resolution, must be value from 0-3, with 0 
+ *              representing lowest resolution and 3 being the highest resolution. 
+ *              0 = 1ms resolution, MAX timeout ~= 60000ms
+ *              1 = .1ms resolution, MAX timeout ~= 6000ms
+ *              2 = .01ms resolution, MAX timeout ~= 600ms
+ *              3 = .001ms resolution, MAX timeout ~= 60ms
+ * @timeout: Set the amount of time (in ms) for the pulse measure module to reset back to inactive tranmsission.
+ *           If no external pulse occurs within timeout period from last edge of input signal, timer assumes 
+ *           transmission is complete (or error occurred) and resets.  
+ *           Value is adjusted based on @resolution to equivalent value, then adjusted value is assigned to ARR. 
+ *
+ * Set TIM2 to input capture mode. The passed resolution determines when the counter increments meaning all values 
+ * stored in `pm_instance->timer_buf` are of that resolution. For example, if `resolution` is 1 then counter increments 
+ * every .1ms, thus if pulse is 9.2ms wide, stored value would be '92'. 
+ * GPIO for the input capture is set to Alternate Function 1 (AF1) allowing for port to directly connect to TIM2
+ * TODO: Have value of 15999 be based off of actual clock frequency 
+ * 
+ * Return: Indicate status of timer intialization
+ * * %0     - Initalized successfully
+ * * %-1    - Parameter Error 
+ */
+int pulse_measure_init(uint32_t resolution, uint32_t timeout)
 {
     _pulse_measure_gpio_init();
-    _pulse_measure_timer_init(2,15);
+    return _pulse_measure_timer_init(resolution, timeout);
 }
 
 /**
