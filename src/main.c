@@ -11,6 +11,9 @@ int main(void)
     // 1 = .1ms of resolution, 15 = 15ms for timeout of transmission burst 
     pulse_measure_init(1,15);
     while(1){
+	    GPIOA->ODR |= GPIO_ODR_OD4;
+	    printf("testing\n");
+
     }
     return 0;
 }
