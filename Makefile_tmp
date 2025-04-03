@@ -1,0 +1,49 @@
+# Directories
+STM32F4_LIB_DIR = /home/tyrotoxism/dev/embedded_dev/STM32CubeF4
+CMSIS_DIR = $(STM32F4_LIB_DIR)/Drivers/CMSIS
+CORE_DIR = $(CMSIS_DIR)/Core
+DEVICE_DIR = $(CMSIS_DIR)/Device/ST/STM32F4xx
+UART_DRIVER_DIR = lib/UART_driver
+PRINTF_DIR = lib/printf
+
+# Compiler and Flags
+CC = arm-none-eabi-gcc
+LD = arm-none-eabi-ld
+OBJCOPY = arm-none-eabi-objcopy
+INCLUDES = -I$(CORE_DIR)/Include \
+		   -I$(DEVICE_DIR)/Include \
+		   -Ilib/UART_driver/src \
+		   -Ilib/printf \
+		   -Iinclude
+CFLAGS = $(INCLUDES) -mcpu=cortex-m4 -mthumb -DPRINTF_INCLUDE_CONFIG_H  -DSTM32F446xx --specs=nosys.specs 
+LDFLAGS = -T $(STM32F4_LIB_DIR)/Projects/STM32446E-Nucleo/Templates/STM32CubeIDE/
+# STM32F446RETX_FLASH.ld
+
+
+main: build/main.o build/pulse_measure.o build/uart.o build/printf.o 
+	$(CC) $(LDFLAGS) -o main build/main.o build/pulse_measure.o
+
+build/main.o : src/main.c include/pulse_measure.h $(UART_DRIVER_DIR)/src/uart.h \
+	$(PRINTF_DIR)/printf.h
+	$(CC) -c src/main.c -o build/main.o $(CFLAGS)
+
+build/pulse_measure.o : src/pulse_measure.c include/pulse_measure.h $(DEVICE_DIR)/Include/stm32f4xx.h \
+	$(UART_DRIVER_DIR)/src/uart.h $(PRINTF_DIR)/printf.h
+	$(CC) -c src/pulse_measure.c -o build/pulse_measure.o $(CFLAGS)
+
+build/uart.o : $(UART_DRIVER_DIR)/src/uart.c $(UART_DRIVER_DIR)/src/uart.h
+	$(CC) -c $(UART_DRIVER_DIR)/src/uart.c -o build/uart.o $(CFLAGS)
+
+build/printf.o : $(PRINTF_DIR)/printf.c $(PRINTF_DIR)/printf.h 
+	$(CC) -c $(PRINTF_DIR)/printf.c -o build/printf.o $(CFLAGS)
+
+clean :
+	rm -f main build/*.o
+
+
+	#arm-none-eabi-gcc -DSTM32F446xx\
+	# -I~/dev/embedded_dev/STM32CubeF4/Drivers/CMSIS/Device/ST/STM32F4xx/Include/\
+#	 -I~/dev/embedded_dev/STM32CubeF4/Drivers/CMSIS/Core/Include/\
+#	 -Iinclude/\
+#	 -Ilib/UART_driver/src\
+#	 src/main.c

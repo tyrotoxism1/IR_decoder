@@ -50,4 +50,3 @@ $(PROJ_NAME).bin: $(PROJ_NAME).elf
 
 flash: $(PROJ_NAME).bin 
 	st-flash write $(PROJ_NAME).bin 0x8000000 
-
