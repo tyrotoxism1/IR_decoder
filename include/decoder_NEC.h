@@ -16,5 +16,4 @@ uint8_t decoder_NEC_get_address_high(void);
 uint8_t decoder_NEC_get_command(void);
 uint8_t decoder_NEC_get_inverted_command(void);
 
-
 #endif //DECODER_NEC_H

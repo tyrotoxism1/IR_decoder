@@ -13,7 +13,7 @@ TODO: Double check what the edge index is of the buffer once the buffer is print
 #include "printf.h"
 
 // Probably change to static consts so we can use them in functions
-static const uint32_t SETUP_START = 90;
+static const uint32_t STEUP_START = 90;
 static const uint32_t NEW_TRANSMISSION = 45;
 static const uint32_t REPEAT_TRANSMISSION = 22;
 static const uint32_t IR_DATA_1 = 16;
@@ -110,9 +110,10 @@ static DECODE_STATUS _populate_metdata(uint8_t *metadata, uint32_t *buffer, int 
 	return decoder_inst->status;
 }
 
+
 /**
- * decoder_NEC_process_buffer() - Iterate over timing buffer to poplulate IR
- * decoder module members. Takes   
+ * decoder_NEC_process_buffer() - Iterate over array to poplulate module attributes
+ * with incoming bits based on pulse measurment timings. 
  * 
  * @buffer: Pointer to the buffer of timing values. 
  * @fast_parse: Boolean that determines if inverted address and inverted command are ignored or
@@ -179,7 +180,7 @@ void decoder_NEC_process_buffer(uint32_t *buffer, uint8_t fast_parse, uint32_t p
 		return;
 	}
 	decoder_inst->status = COMPLETE;
-}
+ }
 
 DECODE_STATUS decoder_NEC_get_status(void)
 {
@@ -217,6 +218,4 @@ void decoder_NEC_print_data(void)
     printf("Address high: %i\n", decoder_inst->address_high);
     printf("Address command 1: %i\n", decoder_inst->command);
 }
-
-
 
