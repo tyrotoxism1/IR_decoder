@@ -41,7 +41,6 @@ all: $(PROJ_NAME).bin
 
 clean:
 	rm -f $(PROJ_NAME).bin $(PROJ_NAME).elf
-
 $(PROJ_NAME).elf: $(SRC_FILES)
 	$(CC) $(CFLAGS) -o $@ $^
 
