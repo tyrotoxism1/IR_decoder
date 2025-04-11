@@ -2,6 +2,7 @@
 *.d
 
 # Compiled Object files
+build/
 *.slo
 *.lo
 *.o
@@ -34,3 +35,7 @@
 # VSCode 
 .vscode/
 .pio/
+
+# Build files
+*.elf
+*.bin
