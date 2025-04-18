@@ -1,7 +1,7 @@
 # Project setup
 PROJ_NAME = $(shell basename $(CURDIR))
 
-STM32F4_LIB_DIR = /home/tyrotoxism/dev/embedded_dev/STM32CubeF4
+STM32F4_LIB_DIR = $(HOME)/dev/embedded_dev/STM32CubeF4
 CMSIS_DIR = $(STM32F4_LIB_DIR)/Drivers/CMSIS
 STARTUP_FILE = $(HOME)/dev/embedded_dev/STM32CubeF4/Drivers/CMSIS/Device/ST/STM32F4xx/Source/Templates/gcc/startup_stm32f446xx.s 
 SYS_INIT_FILE = $(HOME)/dev/embedded_dev/STM32CubeF4/Drivers/CMSIS/Device/ST/STM32F4xx/Source/Templates/system_stm32f4xx.c
@@ -20,6 +20,7 @@ CFLAGS = -O0 -g -T$(LINKER_SCIRPT) -DSTM32F446xx -DPRINTF_INCLUDE_CONFIG_H -mcpu
 # Source files
 SRC_FILES = src/main.c \
        src/pulse_measure.c \
+       src/decoder_NEC.c \
        lib/UART_driver/src/uart.c \
        lib/printf/printf.c \
        $(SYS_INIT_FILE) \
@@ -30,7 +31,7 @@ SRC_FILES = src/main.c \
 INCLUDES = -Iinclude \
 	   -Ilib/UART_driver/src \
 	   -Ilib/printf \
-           -I$(HOME)/dev/embedded_dev/STM32CubeF4/Drivers/CMSIS/Device/ST/STM32F4xx/Include \
+	   -I$(HOME)/dev/embedded_dev/STM32CubeF4/Drivers/CMSIS/Device/ST/STM32F4xx/Include \
 	   -I$(HOME)/dev/embedded_dev/STM32CubeF4/Drivers/CMSIS/Core/Include
 
 CFLAGS += $(INCLUDES)

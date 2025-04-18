@@ -8,7 +8,7 @@
 
 // Used for testing decoder module  
 static uint32_t example_timer_buf[150] = {89,45,6,16,6,5,6,5,6,5,6,5,6,5,6,5,6,5,6,5,6,16,6,16,5,17,5,16,6,16,6,16,6,16,5,\
-16,6,5,6,16,6,16,6,5,6,5,6,5,7,5,6,5,6,16,6,5,6,5,6,16,6,16,6,17,6,16,6,16,6,5,6,16,6,16,5,6,6,7,6,6,6,\
+16,6,5,6,16,6,16,6,5,6,5,6,5,7,5,6,5,6,16,6,5,6,5,6,16,6,16,6,17,6,16,6,16,6,5,6,16,6,16,5,6,6,5,6,6,6,\
 5,6,5,6,17,6,5,6,5,6,16,6,16,6,16,6,17,6,0
 };
 
@@ -26,7 +26,8 @@ int main(void)
 {
     int printed = 0; 
     UART_config();
-    decoder_NEC_process_buffer(&example_timer_buf,0,102);
+	decoder_NEC_init();
+    decoder_NEC_process_buffer(example_timer_buf,0,102);
     decoder_NEC_print_data(); 
     while(1){
     }

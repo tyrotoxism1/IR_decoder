@@ -39,3 +39,6 @@ build/
 # Build files
 *.elf
 *.bin
+
+# GDB 
+*.gdb*
