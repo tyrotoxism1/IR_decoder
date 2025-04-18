@@ -13,7 +13,7 @@ TODO: Double check what the edge index is of the buffer once the buffer is print
 #include "printf.h"
 
 // Probably change to static consts so we can use them in functions
-static const uint32_t STEUP_START = 90;
+static const uint32_t SETUP_START = 90;
 static const uint32_t NEW_TRANSMISSION = 45;
 static const uint32_t REPEAT_TRANSMISSION = 22;
 static const uint32_t IR_DATA_1 = 16;
@@ -48,7 +48,8 @@ struct decoder_NEC_t{
     DECODE_STATUS status;
 };
 
-// Create global single instance of decoder module and init values to 0.
+// Create global single instance of decoder module and init values to 0.(unsure
+// if bad idea to set here and not in init funct
 static decoder_NEC_t decoder_storage = {0};
 decoder_NEC_handler decoder_inst; 
 
@@ -180,7 +181,7 @@ void decoder_NEC_process_buffer(uint32_t *buffer, uint8_t fast_parse, uint32_t p
 		return;
 	}
 	decoder_inst->status = COMPLETE;
- }
+}
 
 DECODE_STATUS decoder_NEC_get_status(void)
 {

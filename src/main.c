@@ -31,6 +31,7 @@ int main(void)
     // 1 = .1ms of resolution, 15 = 15ms for timeout of transmission burst 
 	pulse_measure_init(1,15);
     GPIOA->MODER |= GPIO_MODER_MODE5_0;
+
     while(1){
 
 		if(pulse_measure_get_status() == PM_COMPLETE){
