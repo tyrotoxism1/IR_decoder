@@ -48,8 +48,7 @@ struct decoder_NEC_t{
     DECODE_STATUS status;
 };
 
-// Create global single instance of decoder module and init values to 0.(unsure
-// if bad idea to set here and not in init funct
+// Create global single instance of decoder module and init values to 0.
 static decoder_NEC_t decoder_storage = {0};
 decoder_NEC_handler decoder_inst; 
 
@@ -113,8 +112,8 @@ static DECODE_STATUS _populate_metdata(uint8_t *metadata, uint32_t *buffer, int 
 
 
 /**
- * decoder_NEC_process_buffer() - Iterate over array to poplulate module attributes
- * with incoming bits based on pulse measurment timings. 
+ * decoder_NEC_process_buffer() - Iterate over timing buffer to poplulate IR
+ * decoder module members. Takes   
  * 
  * @buffer: Pointer to the buffer of timing values. 
  * @fast_parse: Boolean that determines if inverted address and inverted command are ignored or

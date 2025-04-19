@@ -41,6 +41,7 @@ int main(void)
 			GPIOA->ODR ^= GPIO_ODR_OD5;
 			pulse_measure_set_status(PM_IDLE);
 		}
+	}
 	return 0;
 }
 
