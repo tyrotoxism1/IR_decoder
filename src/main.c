@@ -25,11 +25,23 @@ static uint32_t example_repeat_command[150] = {
 int main(void)
 {
     int printed = 0; 
+	int pulse_measure_was_active = 0;
     UART_config();
 	decoder_NEC_init();
-    decoder_NEC_process_buffer(example_timer_buf,0,102);
-    decoder_NEC_print_data(); 
+	pulse_measure_init(1,150);
+    GPIOA->MODER |= GPIO_MODER_MODE5_0;
     while(1){
+		if( !(pulse_measure_get_tranmission_active()) && (pulse_measure_was_active) ){
+			pulse_measure_was_active = 0;
+			decoder_NEC_process_buffer(pulse_measure_get_buf(), 0, pulse_measure_get_edge_count());
+			pulse_measure_print_values(1);
+			//decoder_NEC_print_data(); 
+			GPIOA->ODR ^= GPIO_ODR_OD5;
+			//pulse_measure_reset();
+		}
+		else if(pulse_measure_get_tranmission_active()){
+			pulse_measure_was_active = 1;
+		}
     }
     return 0;
 }

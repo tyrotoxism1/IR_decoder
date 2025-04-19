@@ -48,8 +48,7 @@ struct decoder_NEC_t{
     DECODE_STATUS status;
 };
 
-// Create global single instance of decoder module and init values to 0.(unsure
-// if bad idea to set here and not in init funct
+// Create global single instance of decoder module and init values to 0.
 static decoder_NEC_t decoder_storage = {0};
 decoder_NEC_handler decoder_inst; 
 
@@ -92,18 +91,12 @@ uint8_t _within_margin(uint32_t value, uint32_t target_value, uint32_t plus_minu
  * 
  * NEC Address and command are 8 bits, for each bit check the value in the buffer. If it's
  * within `IR_DATA_1` by a margin of 1 value (maybe margin should be variable) or within 
- * `IR_DATA_0` by a margin of 1, then bit shift corresponding value. Bit shift works by creating value
- * with single 1 in bit placement that correlates to bit in timing buffer. For example, `buffer[5]` is 
- * bit 1 of Address for NEC protocol (remember `buffer` holds timings of pulses in between data pulses) and lets
- * say `buffer[5]`=16. Value of 16 means data bit is 1, at Address bit 1 so the value `0b00000010` is OR'd with *metadata value. 
- * As the loop iterates over the value each buffer timing val is converted into either 0 or 1 and placed in respective bit. 
- */
+ * `IR_DATA_0` by a margin of 1, then bit shift corresponding value. `metadata`
+ * is intially shifted left automatically placing 0 in LSB. If timing pulse is
+ * 1, then logic OR `metadata` with 1. 
+ **/
 static DECODE_STATUS _populate_metdata(uint8_t *metadata, uint32_t *buffer, int start_idx)
 {	
-/*
-NOTE: bit shifting isn't working atm. We are shifting 
-
-*/
     for(int i=0; i<16; i+=2){
 		*metadata = (*metadata)<<1; 
         if( _within_margin(buffer[start_idx+i], IR_DATA_1, MARGIN_OF_ERROR) ){
@@ -113,27 +106,34 @@ NOTE: bit shifting isn't working atm. We are shifting
             decoder_inst->status = DECODE_ERROR;
             return decoder_inst->status;
         }
-        printf("i:%i\ttiming: %i\tvalue:%i\n", i,buffer[start_idx+i], *metadata);
     }
 	return decoder_inst->status;
 }
 
 /**
- * decoder_NEC_process_buffer() - Iterate over array to poplulate module attributes
- * with incoming bits based on pulse measurment timings. 
+ * decoder_NEC_process_buffer() - Iterate over timing buffer to poplulate IR
+ * decoder module members. Takes   
  * 
  * @buffer: Pointer to the buffer of timing values. 
  * @fast_parse: Boolean that determines if inverted address and inverted command are ignored or
  *              not. If `fast_parse` is greater than 0 inverted bytes are ignored, 
  *              otherwise error detection ensures inverted and original bits are equal.
+ *              TODO: Implement, currently just populates all members
  * @pulse_cnt: Number of pulse timing values in `buffer`.
  * 
  * Context:  Incoming data shall be .1ms resolution, meaning a value of 90 = 9ms.
  * 
- * Iterates over timing values in `buffer` using passed number of pulse values. Determines if setup pulses 
+ * Iterates over timing values in `buffer`. Determines if setup pulses 
  * indicate new or repeat transmission. If pulses indicate repeat, nothing extra is needed and returns. 
- * Otherwise, process buffer as so: iterate over every other pulse timing value since transmission 
- * includes 560us pulse between bits. If `fast_parse` is set, iteration skips over inverse byte (sent after address and command bits).
+ * Otherwise, process each section of buffer. First section is setup
+ * tranmsission timing from `buffer[0]` and `buffer[1]`. If setup timing
+ * is non-repeat, then begin to populate `decoder_inst` members. First section
+ * (address_low) begins at index 3. inverted address low begins at index
+ * 19.address high begins at index 35. Inverted address high starts at index
+ * 51. Command data starts at index 67 and finally inverted command starts at
+ * index 83. Keep in mind that `buffer` contains intermediate pulse values
+ * between data pulses. So every other value of `buffer` isn't very important
+ * except for ensuring correct transmission.  
  */
 void decoder_NEC_process_buffer(uint32_t *buffer, uint8_t fast_parse, uint32_t pulse_cnt)
 {
@@ -148,40 +148,34 @@ void decoder_NEC_process_buffer(uint32_t *buffer, uint8_t fast_parse, uint32_t p
             decoder_inst->status = DECODE_ERROR;
         }
     }
-    printf("low addr\n");
     if( (_populate_metdata( &(decoder_inst->address_low), buffer, 3)) == DECODE_ERROR)
 	{
 		printf("ERROR ocured processing low address\n");
 		return;
 	}
-    printf("\ninverse low addr\n");
     if( (_populate_metdata( &(decoder_inst->inverted_low_address), buffer, 19)) == DECODE_ERROR)
 	{
 		printf("ERROR ocured processing inverse low address\n");
 		return;
 	}
-    printf("\nhigh addr\n");
     if( (_populate_metdata( &(decoder_inst->address_high), buffer, 35)) == DECODE_ERROR)
 	{
 		printf("ERROR ocured processing high address\n");
 		return;
 	}
-    printf("\ninverse high addr\n");
     if( (_populate_metdata( &(decoder_inst->inverted_high_address), buffer, 51)) == DECODE_ERROR)
 	{
 		printf("ERROR ocured processing inverse high address\n");
 		return;
 	}
-    printf("\ncommand 1\n");
     if( (_populate_metdata( &(decoder_inst->command), buffer, 67)) == DECODE_ERROR)
 	{
-		printf("ERROR ocured processing command 1\n");
+		printf("ERROR ocured processing command\n");
 		return;
 	}
-    printf("\ncommand 2\n");
     if( (_populate_metdata( &(decoder_inst->inverted_command), buffer, 83)) == DECODE_ERROR)
 	{
-		printf("ERROR ocured processing command 2\n");
+		printf("ERROR ocured processing inverted command\n");
 		return;
 	}
 	decoder_inst->status = COMPLETE;
@@ -190,6 +184,30 @@ void decoder_NEC_process_buffer(uint32_t *buffer, uint8_t fast_parse, uint32_t p
 DECODE_STATUS decoder_NEC_get_status(void)
 {
     return decoder_inst->status;
+}
+
+uint8_t decoder_NEC_get_address_low(void){
+	return decoder_inst->address_low;
+}
+
+uint8_t decoder_NEC_get_inverted_address_low(void){
+	return decoder_inst->inverted_low_address;
+}
+
+uint8_t decoder_NEC_get_address_high(void){
+	return decoder_inst->address_high;
+}
+
+uint8_t decoder_NEC_get_inverted_address_high(void){
+	return decoder_inst->inverted_high_address;
+}
+
+uint8_t decoder_NEC_get_command(void){
+	return decoder_inst->command;
+}
+
+uint8_t decoder_NEC_get_inverted_command(void){
+	return decoder_inst->inverted_command;
 }
 
 void decoder_NEC_print_data(void)
