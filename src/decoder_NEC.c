@@ -1,13 +1,3 @@
-/*
-NOTES:
-
-TODO: Double check what the edge index is of the buffer once the buffer is printed
-    - We are getting more popluated values than expected and want to ensure we aren't getting unecessary data 
-    or overwritting 
-    - Not necessarily being overwritten unless transmission is repeat command, otherwise just forgot about low address 
-    and high address being seperated
-
-*/
 #include "decoder_NEC.h"
 #include "uart.h"
 #include "printf.h"
@@ -18,11 +8,11 @@ static const uint32_t NEW_TRANSMISSION = 45;
 static const uint32_t REPEAT_TRANSMISSION = 22;
 static const uint32_t IR_DATA_1 = 16;
 static const uint32_t IR_DATA_0 = 5;
-static const uint32_t MARGIN_OF_ERROR = 1; 
+static const uint32_t MARGIN_OF_ERROR = 2; 
 
 typedef enum DECODE_STATUS {
     DECODE_ERROR,
-    WAITING,
+    IDLE,
     IN_PROGRESS,
     COMPLETE,
 } DECODE_STATUS;
@@ -55,7 +45,7 @@ decoder_NEC_handler decoder_inst;
 void decoder_NEC_init(void)
 {
 	decoder_inst = &decoder_storage;
-	decoder_inst->status = WAITING;
+	decoder_inst->status = IDLE;
 }
 
 /**
@@ -79,6 +69,27 @@ uint8_t _within_margin(uint32_t value, uint32_t target_value, uint32_t plus_minu
         return 1;
     else
         return 0;
+}
+
+/**
+ * _verify_transmission() - checks `decoder_inst` members against the inverted
+ * counter parts
+ *
+ * XOR each member with inverted value to check if the values are properly
+ * inverted
+ *
+ * Return:
+ * %0 - inverted data did not match member data
+ * %1 - tranmsission was succesfful, inverted data matched
+ */
+uint8_t _verify_transmission()
+{
+	if( (decoder_inst->address_low^decoder_inst->inverted_low_address) != 0xFF)
+		return 0;
+	if( (decoder_inst->address_high^decoder_inst->inverted_high_address) != 0xFF)
+		return 0;
+	if( (decoder_inst->command^decoder_inst->inverted_command) != 0xFF)
+		return 0;
 }
 
 /**
@@ -149,35 +160,37 @@ void decoder_NEC_process_buffer(uint32_t *buffer, uint8_t fast_parse, uint32_t p
             decoder_inst->status = DECODE_ERROR;
         }
     }
-    if( (_populate_metdata( &(decoder_inst->address_low), buffer, 3)) == DECODE_ERROR)
-	{
+
+    if( (_populate_metdata( &(decoder_inst->address_low), buffer, 3)) == DECODE_ERROR){
 		printf("ERROR ocured processing low address\n");
 		return;
 	}
-    if( (_populate_metdata( &(decoder_inst->inverted_low_address), buffer, 19)) == DECODE_ERROR)
-	{
-		printf("ERROR ocured processing inverse low address\n");
-		return;
-	}
-    if( (_populate_metdata( &(decoder_inst->address_high), buffer, 35)) == DECODE_ERROR)
-	{
+	if( (_populate_metdata( &(decoder_inst->address_high), buffer, 35)) == DECODE_ERROR){
 		printf("ERROR ocured processing high address\n");
 		return;
 	}
-    if( (_populate_metdata( &(decoder_inst->inverted_high_address), buffer, 51)) == DECODE_ERROR)
-	{
-		printf("ERROR ocured processing inverse high address\n");
-		return;
-	}
-    if( (_populate_metdata( &(decoder_inst->command), buffer, 67)) == DECODE_ERROR)
-	{
+    if( (_populate_metdata( &(decoder_inst->command), buffer, 67)) == DECODE_ERROR){
 		printf("ERROR ocured processing command\n");
 		return;
 	}
-    if( (_populate_metdata( &(decoder_inst->inverted_command), buffer, 83)) == DECODE_ERROR)
-	{
-		printf("ERROR ocured processing inverted command\n");
-		return;
+
+	if( !(fast_parse) ){
+		if( (_populate_metdata( &(decoder_inst->inverted_low_address), buffer, 19)) == DECODE_ERROR){
+			printf("ERROR ocured processing inverse low address\n");
+			return;
+		}
+		
+		if( (_populate_metdata( &(decoder_inst->inverted_high_address), buffer, 51)) == DECODE_ERROR){
+			printf("ERROR ocured processing inverse high address\n");
+			return;
+		}
+		if( (_populate_metdata( &(decoder_inst->inverted_command), buffer, 83)) == DECODE_ERROR){
+			printf("ERROR ocured processing inverted command\n");
+			return;
+		}
+		if( !(_verify_transmission()) ){
+			decoder_inst->status = DECODE_ERROR; 
+		}
 	}
 	decoder_inst->status = COMPLETE;
 }
@@ -216,6 +229,6 @@ void decoder_NEC_print_data(void)
     printf("STATUS: %i\n", decoder_inst->status);
     printf("Address low: %i\n", decoder_inst->address_low);
     printf("Address high: %i\n", decoder_inst->address_high);
-    printf("Address command 1: %i\n", decoder_inst->command);
+    printf("Address command: %i\n", decoder_inst->command);
 }
 

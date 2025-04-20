@@ -50,7 +50,6 @@ void TIM2_IRQHandler(void)
 
     if(TIM2->SR & TIM_SR_UIF){
         GPIOA->ODR &= ~(GPIO_ODR_OD4); 
-		printf("complete\n");
 		pm_instance->status = PM_COMPLETE;
         TIM2->DIER &= ~(TIM_DIER_UIE); 
         pm_instance->active_transmission = 0;
