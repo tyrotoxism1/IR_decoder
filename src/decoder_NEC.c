@@ -90,6 +90,7 @@ uint8_t _verify_transmission()
 		return 0;
 	if( (decoder_inst->command^decoder_inst->inverted_command) != 0xFF)
 		return 0;
+	return 1;
 }
 
 /**
