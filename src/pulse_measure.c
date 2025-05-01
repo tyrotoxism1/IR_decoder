@@ -6,6 +6,7 @@
 
 #define PULSE_MEASURE_MAX_PULSES 150
 
+
 /**
  * struct pulse_measure_t - holds incoming pulse measurnments and minimum necessary
  * supplimental info for transmission pulse measurnments 
@@ -20,6 +21,7 @@ struct pulse_measure_t{
     uint32_t active_transmission;
     uint32_t timing_buf[PULSE_MEASURE_MAX_PULSES]; 
     uint32_t edge_index;
+	PULSE_MEASURE_STATUS status;
 };
 // Create global single instance of pulse measure module and init values to 0.
 static pulse_measure_t pm_instance_storage = {0};
@@ -30,21 +32,25 @@ pulse_measure_handle pm_instance = &pm_instance_storage;
  * and counter overflow interrupts
  * 
  * For input capture interrupt, save timer value and reset timer count. Overflow interrupt
- * means timeout occurred due to end of transmission or error during transmission. 
+ * means timeout occurred due to end of transmission, error during transmission
+ * could happen but is hanlded by decoder module.  
  */
 void TIM2_IRQHandler(void)
 {
     if(TIM2->SR & TIM_SR_CC1IF){
         GPIOA->ODR |= GPIO_ODR_OD4; 
+		pm_instance->status = PM_PROCESSING;
         TIM2->SR &= ~TIM_SR_UIF;  
         TIM2->DIER |= TIM_DIER_UIE; 
         pm_instance->active_transmission = 1; 
         // Reading CCR1 clears TIM_SR_CC1F 
         pm_instance->timing_buf[(pm_instance->edge_index)++] = TIM2->CCR1;
-        TIM2->CNT = 0;
+		TIM2->CNT = 0;
     }
+
     if(TIM2->SR & TIM_SR_UIF){
         GPIOA->ODR &= ~(GPIO_ODR_OD4); 
+		pm_instance->status = PM_COMPLETE;
         TIM2->DIER &= ~(TIM_DIER_UIE); 
         pm_instance->active_transmission = 0;
         pm_instance->edge_index = 0;
@@ -70,7 +76,6 @@ static void _pulse_measure_gpio_init(void)
     GPIOA->MODER |= GPIO_MODER_MODE4_0;
     GPIOA->AFR[0] &= ~(GPIO_AFRL_AFRL0);
     GPIOA->AFR[0] |= GPIO_AFRL_AFRL0_0;
-
 }
 
 /**
@@ -142,6 +147,7 @@ static int _pulse_measure_timer_init(uint32_t resolution, uint32_t timeout){
 int pulse_measure_init(uint32_t resolution, uint32_t timeout)
 {
     _pulse_measure_gpio_init();
+	pm_instance->status = PM_IDLE;
     return _pulse_measure_timer_init(resolution, timeout);
 }
 
@@ -157,7 +163,7 @@ uint32_t pulse_measure_get_edge_count(void)
 /**
  * pulse_measure_get_tranmission_active() - Accessor to state of transmission for pulse measure module. 
  */
-uint32_t pulse_measure_get_tranmission_active(void)
+uint32_t pulse_measure_get_active_transmission(void)
 {
     return pm_instance->active_transmission;
 }
@@ -189,14 +195,17 @@ void pulse_measure_reset(void)
  * pulse_measure_print_values() - Displays module's metadata and buffer values
  * 
  * @print_array: Prints all array values if nonzero, ignores printing otherwise 
+ *
+ * Iterates starting at `i=1` since first value of buffer is garbage. See
+ * context section of `pulse_measure_get_buf()` for reason. 
  */
 void pulse_measure_print_values(int print_array)
 {
     printf("Active transmisssion: %i\n", pm_instance->active_transmission);
-    printf("edge inded: %i\n", pm_instance->active_transmission);
+    printf("edge index: %i\n", pm_instance->edge_index);
     if(print_array){
         printf("Array values:");
-        for(int i=0; i<PULSE_MEASURE_MAX_PULSES; i++){
+        for(int i=1; i<PULSE_MEASURE_MAX_PULSES; i++){
             if(i%15==0){
                 printf("\n");
             }
@@ -216,9 +225,26 @@ uint32_t pulse_measure_get_buf_val(uint16_t index)
 }
 
 /**
- * pulse_measure_get_buf() - Accessor to buffer pointer
+ * pulse_measure_get_buf() - Accessor to buffer pointer, first element is
+ * garbage so return from index 1 onwards.
+ *
+ * Context - First value of buffer is garbage since input capture for TIM2 has
+ * timer continously running, thus first input capture is the random value from
+ * last edge of last transmission to first edge of actual transmission. And
+ * since counter value rolls over based on ARR, it's essentially random. 
  */
 uint32_t* pulse_measure_get_buf(void)
 {
-    return pm_instance->timing_buf;
+    return pm_instance->timing_buf+1;
+}
+
+PULSE_MEASURE_STATUS pulse_measure_get_status(void)
+{
+	return pm_instance->status;
+}
+
+
+void pulse_measure_set_status(PULSE_MEASURE_STATUS new_status)
+{
+	pm_instance->status = new_status;
 }

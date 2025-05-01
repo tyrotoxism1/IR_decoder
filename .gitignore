@@ -35,3 +35,10 @@ build/
 # VSCode 
 .vscode/
 .pio/
+
+# Build files
+*.elf
+*.bin
+
+# GDB 
+*.gdb*

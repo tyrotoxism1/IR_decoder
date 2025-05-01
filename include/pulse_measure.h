@@ -20,13 +20,26 @@
 typedef struct pulse_measure_t pulse_measure_t;
 typedef pulse_measure_t* pulse_measure_handle;
 
+typedef enum PULSE_MEASURE_STATUS{
+	PM_ERROR,
+	PM_IDLE,
+	PM_PROCESSING,
+	PM_COMPLETE,
+} PULSE_MEASURE_STATUS;
+
+
 int pulse_measure_init(uint32_t resolution, uint32_t timeout);
-uint32_t pulse_measure_get_edge_count(void);
-uint32_t pulse_measure_get_tranmission_active(void);
 void pulse_measure_reset(void);
-void pulse_measure_active_check(void);
 void pulse_measure_print_values(int print_array);
+
+// Accessors
+uint32_t pulse_measure_get_edge_count(void);
+uint32_t pulse_measure_get_active_transmission(void);
 uint32_t pulse_measure_get_buf_val(uint16_t index);
 uint32_t* pulse_measure_get_buf(void);
+PULSE_MEASURE_STATUS pulse_measure_get_status(void);
+
+// Setters
+void pulse_measure_set_status(PULSE_MEASURE_STATUS new_status);
 
 #endif // PULSE_MEASURE_H
